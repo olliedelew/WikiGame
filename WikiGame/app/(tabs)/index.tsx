@@ -1,3 +1,8 @@
+// TODO: Add in timer for leaderboard, add in ability to change highlight colour and text color
+// Add in ML to find shortest path to final page
+// Add in hints functionality
+// Add in homepage w/ choices for random start and end or pick via search or common ones (search box at top and common underneath?)
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -6,25 +11,35 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 import { WebView } from "react-native-webview";
 
 import WikipediaPage from "@/components/WikipediaPage";
 // import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
-const MainScreen: React.FC = () => {
+const GameScreen: React.FC = () => {
   const [currentPage, setCurrentPage] = useState("Start_Page");
   const [targetPage] = useState("Target_Page");
   const [htmlContent, setHtmlContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [linkCount, setLinkCount] = useState(0);
-  const [currentURL, setCurrentURL] = useState(
+  const [startURL, setStartURL] = useState(
     "https://en.m.wikipedia.org/wiki/Ubuntu_Kylin"
   );
-//   if(link.href.startsWith("${currentURL}"){
-//     window.ReactNativeWebView.postMessage(false);
-// }
+  const [currentURL, setCurrentURL] = useState(startURL);
 
+  const [targetURL, setTargetURL] = useState(
+    "https://en.m.wikipedia.org/wiki/Pinyin"
+  );
+  const [highlightColor, setHighlightColor] = useState("pink");
+  const [textColor, setTextColor] = useState("black");
+  const [timer, setTimer] = useState(0);
+  const [hint, setHint] = useState("");
+
+  //   if(link.href.startsWith("${currentURL}"){
+  //     window.ReactNativeWebView.postMessage(false);
+  // }
 
   const fetchAndUpdatePage = (title: string) => {
     setLoading(true);
@@ -48,7 +63,9 @@ const MainScreen: React.FC = () => {
         <TouchableOpacity onPress={() => alert("Settings pressed")}>
           <Text style={styles.link}>Settings</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => alert("Hints pressed")}>
+        <TouchableOpacity
+          onPress={() => setHint("Try looking at the sidebar links.")}
+        >
           <Text style={styles.link}>Hints</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onBackPress}>
@@ -58,27 +75,14 @@ const MainScreen: React.FC = () => {
     );
   };
 
-  //   const injectedJavaScript = `
-  //     (function() {
-  //       document.querySelectorAll('a').forEach(link => {
-  //         link.style.color = 'red';
-  //         link.addEventListener('click', function(event) {
-  //           event.preventDefault();
-  //           window.ReactNativeWebView.postMessage(this.href);
-  //         });
-  //       });
-  //     })();
-  //     true;
-  //   `;
-  //   const currentURL = window.location.href; // Get the current page URL
-  console.log("currentURL");
-
-  console.log(currentURL);
+  // console.log("currentURL");
+  // console.log(currentURL);
   const ignore_list = ["https://en.m.wikipedia.org/wiki/Main_Page"];
   const injectedJavaScript = `
   
 document.querySelectorAll('a').forEach(link => {
   if (!(link.href.startsWith('https://en.m.wikipedia.org/wiki/')) || (link.href.startsWith('https://en.m.wikipedia.org/wiki/File:'))
+    || (link.href.startsWith('https://en.m.wikipedia.org/wiki/Special:')) || (link.href.startsWith('https://en.m.wikipedia.org/wiki/Help:'))
     || (link.href.endsWith("#p-lang")) || (link.href.startsWith('https://en.m.wikipedia.org/wiki/Talk:'))
     || (link.href.startsWith("https://en.m.wikipedia.org/wiki/Portal:")) || (link.href.startsWith("https://en.m.wikipedia.org/wiki/Wikipedia:"))
     || ((link.href.startsWith("${currentURL}")) && !(link.href.startsWith('${currentURL}#cite_note')))
@@ -97,7 +101,7 @@ document.querySelectorAll('a').forEach(link => {
     if(link.href.startsWith('${currentURL}#cite_note')){
         link.style.color = 'black';
     } else {
-        link.style.backgroundColor = 'pink';
+        link.style.backgroundColor = '${highlightColor}';
     }
 
     link.addEventListener('click', event => {
@@ -112,22 +116,6 @@ document.querySelectorAll('a').forEach(link => {
   }
 
 });
-// document.querySelectorAll("
-//   a:([href^='https://en.m.wikipedia.org/wiki/']),
-//   a:([href^='https://en.m.wikipedia.org/wiki/File:']),
-//   a:([href$='#p-lang']),
-//   a:([href^='https://en.m.wikipedia.org/wiki/Talk:']),
-//   a:([href^='https://en.m.wikipedia.org/wiki/Portal:']),
-//   a:([href^='https://en.m.wikipedia.org/wiki/Wikipedia:']),
-//   a:([href^='${currentURL}']),
-//   a[href^='${currentURL}']:not([href^='${currentURL}#cite_note'])
-// ").forEach(link => {
-//     link.style.pointerEvents = 'none';
-//     link.addEventListener('click', event => {
-//       event.preventDefault();
-//       event.stopPropagation();
-//     });
-// });
 
 document.querySelectorAll('a[href$=".jpg"], a[href$=".jpeg"], a[href$=".png"], a[href$=".gif"]').forEach(link => {
     link.style.pointerEvents = 'none';
@@ -144,18 +132,17 @@ document.querySelectorAll('a[href$=".jpg"], a[href$=".jpeg"], a[href$=".png"], a
     document.getElementsByClassName('page-actions-menu')[0].style.display='none';
     document.getElementsByClassName('header-container')[0].style.display='none';
     document.getElementsById('content-collapsible-block-8')[1].style.display='none';
-  true;
+    document.getElementsByClassName('header-container')[0].style.display='none';    
+    true;
 `;
 
   const handleWebViewMessage = (event: any) => {
     const url = event.nativeEvent.data;
-    console.log(url);
     if (url) {
-      setCurrentURL(url);
-      setLinkCount(linkCount + 1);
       console.log(url);
-      // console.log(url.slice(0, 32));
       if (url.slice(0, 32) == "https://en.m.wikipedia.org/wiki/") {
+        setCurrentURL(url);
+        setLinkCount(linkCount + 1);
         webViewRef.current?.injectJavaScript(`
         window.location.href = '${url}';
       `);
@@ -173,18 +160,43 @@ document.querySelectorAll('a[href$=".jpg"], a[href$=".jpeg"], a[href$=".png"], a
   //   }, [currentPage]);
 
   let webViewRef = React.createRef<WebView>();
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimer((prevTimer) => prevTimer + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
       <Header onBackPress={() => alert("Back pressed")} />
       <Text style={styles.counter}>Links clicked: {linkCount}</Text>
+      <Text style={styles.timer}>Time: {timer} seconds</Text>
+      <Text style={styles.hint}>Hint: {hint}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter highlight color"
+        onChangeText={setHighlightColor}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Enter text color"
+        onChangeText={setTextColor}
+      />
       <WebView
         ref={webViewRef}
-        source={{ uri: "https://en.m.wikipedia.org/wiki/Ubuntu_Kylin" }} // https://en.wikipedia.org/wiki/Special:Random
+        source={{ uri: startURL }} // https://en.wikipedia.org/wiki/Special:Random
         injectedJavaScript={injectedJavaScript}
         onMessage={handleWebViewMessage}
         javaScriptEnabled
       />
+      {currentURL === targetURL && (
+        <View style={styles.congrats}>
+          <Text style={styles.congratsText}>
+            Congratulations! You reached the target page.
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 
@@ -200,14 +212,6 @@ document.querySelectorAll('a[href$=".jpg"], a[href$=".jpeg"], a[href$=".png"], a
           htmlContent={htmlContent}
           onLinkPress={fetchAndUpdatePage}
         />
-      )}
-
-      {currentPage === targetPage && (
-        <View style={styles.congrats}>
-          <Text style={styles.congratsText}>
-            Congratulations! You reached the target page.
-          </Text>
-        </View>
       )}
     </View>
   );
@@ -246,6 +250,18 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 16,
   },
+  timer: {
+    padding: 10,
+    fontSize: 16,
+  },
+  input: {
+    padding: 10,
+    fontSize: 16,
+  },
+  hint: {
+    padding: 10,
+    fontSize: 16,
+  },
 });
 
-export default MainScreen;
+export default GameScreen;
